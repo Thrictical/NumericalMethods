@@ -1,10 +1,5 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import {
-  bisectionMethod,
-  secantMethod,
-  newtonRaphsonMethod,
-} from './utils/numericalMethods';
 import type {
   BisectionIteration,
   SecantIteration,
@@ -47,18 +42,46 @@ function App() {
   const [secantRes, setSecantRes] = useState<MethodResult<SecantIteration> | null>(null);
   const [newtonRes, setNewtonRes] = useState<MethodResult<NewtonIteration> | null>(null);
 
-  const handleCalculate = () => {
+  const handleCalculate = async () => {
     // Clear previous results
     setBisectionRes(null);
     setSecantRes(null);
     setNewtonRes(null);
 
-    if (method === 'bisection') {
-      setBisectionRes(bisectionMethod(funcStr, a, b));
-    } else if (method === 'secant') {
-      setSecantRes(secantMethod(funcStr, x0, x1));
-    } else if (method === 'newton') {
-      setNewtonRes(newtonRaphsonMethod(funcStr, x0));
+    if (!funcStr.trim()) {
+      const errorResult = { iterations: [], root: null, rootVal: null, error: 'Please Enter a Valid Method' };
+      if (method === 'bisection') setBisectionRes(errorResult);
+      else if (method === 'secant') setSecantRes(errorResult);
+      else if (method === 'newton') setNewtonRes(errorResult);
+      return;
+    }
+
+    const queryParams = new URLSearchParams({
+      method,
+      func: funcStr,
+      a: a.toString(),
+      b: b.toString(),
+      x0: x0.toString(),
+      x1: x1.toString(),
+    });
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/calculate?${queryParams}`);
+      const result = await response.json();
+
+      if (method === 'bisection') {
+        setBisectionRes(result);
+      } else if (method === 'secant') {
+        setSecantRes(result);
+      } else if (method === 'newton') {
+        setNewtonRes(result);
+      }
+    } catch (error) {
+      console.error('Failed to fetch calculation from backend:', error);
+      const errorResult = { iterations: [], root: null, rootVal: null, error: 'Failed to connect to backend' };
+      if (method === 'bisection') setBisectionRes(errorResult);
+      else if (method === 'secant') setSecantRes(errorResult);
+      else if (method === 'newton') setNewtonRes(errorResult);
     }
   };
 
